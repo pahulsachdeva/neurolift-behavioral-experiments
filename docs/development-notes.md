@@ -2,7 +2,7 @@
 
 ## Reading the code
 
-Start in `statistics.js` for the calculations and import contract. `data.js` defines three experiment briefs, the assumptions behind their practice runs, and a seeded generator. `app.js` handles the workspace, plan persistence, file import, and exports. `style.css` carries the same black and purple design language as Sentient.
+Start in `statistics.js` for the calculations and import contract. `data.js` defines three experiment briefs, the assumptions behind their practice runs, and a seeded generator. `app.js` handles the workspace, plan persistence, file import, and exports. `style.css` uses a navy and blue palette, with an ascending step mark to distinguish NeuroLift from Sentient.
 
 ## Choices worth keeping visible
 

@@ -1,4 +1,4 @@
-<p align="center"><img src="assets/header.svg" alt="NeuroLift — AI Enablement Marker" width="100%"></p>
+<p align="center"><img src="assets/header.svg" alt="NeuroLift — Intelligence in action" width="100%"></p>
 
 <p align="center">Project 02 by Pahul Sachdeva · Behavioral experimentation and measurement</p>
 
