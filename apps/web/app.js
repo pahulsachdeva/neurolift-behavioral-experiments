@@ -1,5 +1,6 @@
 import { experiments, generateRun } from './data.js';
 import { summarize, planSample, validateRows } from './statistics.js';
+import { decisionOptions, decisionStorageKey, fingerprintRows, decisionContext, saveDecision, loadDecisions } from './decisions.js';
 
 const root = document.getElementById('app');
 const navigation = ['Overview', 'Test design', 'Results', 'User rows', 'Notebook'];
@@ -10,6 +11,9 @@ let search = '';
 let page = 1;
 let message = '';
 let savedPlans = {};
+let decisions = loadDecisions({ getItem: key => localStorage.getItem(key) });
+const practiceFingerprints = {};
+let importedFingerprint = null;
 try {
   savedPlans = JSON.parse(localStorage.getItem('neurolift-plans') || '{}');
   if (!savedPlans || typeof savedPlans !== 'object' || Array.isArray(savedPlans)) savedPlans = {};
@@ -25,6 +29,8 @@ const pct = value => `${(100 * value).toFixed(1)}%`;
 const pp = value => `${value >= 0 ? '+' : ''}${(100 * value).toFixed(1)} pp`;
 const number = value => value.toLocaleString('en-US');
 const rows = () => imported || generateRun(selected);
+const currentContext = () => decisionContext(selected.id, imported ? 'Imported rows' : 'Seeded simulation', imported ? importedFingerprint : practiceFingerprints[selected.id], plan());
+const currentDecision = () => decisions.find(item => item.context === currentContext()) || null;
 const plan = () => savedPlans[selected.id] || { baseline: selected.baseline, effect: selected.effect, minimumDays: selected.minimumDays };
 const heading = (label, title, description) => `<div class="page-heading"><div><div class="eyebrow">${label}</div><h1>${title}</h1><p>${description}</p></div><button class="button primary" data-action="export-report">Export readout ↗</button></div>`;
 const badge = (text, tone = 'blue') => `<span class="badge ${tone}">${esc(text)}</span>`;
@@ -52,8 +58,9 @@ function render() {
   const state = runState();
   root.innerHTML = `<div class="layout"><aside><a class="wordmark" href="#" aria-label="NeuroLift overview"><img src="/assets/mark.svg" alt=""><span>NeuroLift<small>INTELLIGENCE IN ACTION</small></span></a><div class="workspace"><span class="tiny-label">PROJECT 02</span><strong>Behavioral experiments</strong><small>From a useful question to a useful test.</small></div><nav aria-label="Workspace navigation">${navigation.map((name, i) => `<button class="nav-item ${view === name ? 'active' : ''}" data-view="${name}"><span>${['◫', '◇', '↗', '≡', '▤'][i]}</span>${name}</button>`).join('')}</nav><div class="side-bottom"><div class="portfolio-note"><span>↗</span><div><strong>The next step after Sentient</strong><small>Listen → design → measure</small></div></div><a href="https://github.com/pahulsachdeva/sentient-behavioral-intelligence" target="_blank" rel="noreferrer">Explore Project 01 ↗</a></div></aside><div class="main"><header><div class="breadcrumb">WORKSPACE <span>/</span> ${view}</div><div class="run-label"><span></span>${imported ? 'IMPORTED RUN' : 'PRACTICE RUN'}</div></header><main><div class="experiment-switch"><label for="experiment">EXPERIMENT</label><select id="experiment">${experiments.map(e => `<option value="${e.id}" ${e.id === selected.id ? 'selected' : ''}>${e.name}</option>`).join('')}</select><span>${selected.area}</span></div><div id="view">${({ Overview: overview, 'Test design': design, Results: results, 'User rows': users, Notebook: notebook })[view](state)}</div></main><footer>NeuroLift · Plan the test. Check the data. Read the result.</footer></div></div><div class="toast" role="status" ${message ? '' : 'hidden'}>${esc(message)}</div>`;
   root.querySelector('.wordmark').addEventListener('click', e => { e.preventDefault(); view = 'Overview'; render(); });
-  root.querySelector('#experiment').addEventListener('change', e => { selected = experiments.find(x => x.id === e.target.value); imported = null; page = 1; search = ''; render(); });
+  root.querySelector('#experiment').addEventListener('change', e => { selected = experiments.find(x => x.id === e.target.value); imported = null; importedFingerprint = null; page = 1; search = ''; render(); });
   root.querySelector('#plan-form')?.addEventListener('submit', savePlan);
+  root.querySelector('#decision-form')?.addEventListener('submit', recordDecision);
   root.querySelector('#import-file')?.addEventListener('change', importRun);
   root.querySelector('#search')?.addEventListener('input', e => { search = e.target.value; page = 1; const pos = e.target.selectionStart; render(); const field = root.querySelector('#search'); field.focus(); field.setSelectionRange(pos, pos); });
 }
@@ -65,10 +72,11 @@ root.addEventListener('click', event => {
   if (!button) return;
   if (button.dataset.view) { view = button.dataset.view; render(); return; }
   const action = button.dataset.action;
-  if (action === 'export-report') download('neurolift-readout.json', { experiment: selected.name, provenance: imported ? 'User imported rows' : 'Seeded simulation', plan: plan(), analysis: runState() });
+  if (action === 'export-report') download('neurolift-readout.json', { experiment: selected.name, provenance: imported ? 'User imported rows' : 'Seeded simulation', schemaVersion: 1, runFingerprint: imported ? importedFingerprint : practiceFingerprints[selected.id], plan: plan(), reviewerDecision: currentDecision(), analysis: runState() });
   if (action === 'export-rows') download('neurolift-user-rows.json', rows());
   if (action === 'import') root.querySelector('#import-file').click();
-  if (action === 'reset') { imported = null; page = 1; render(); }
+  if (action === 'reset') { imported = null; importedFingerprint = null; page = 1; render(); }
+  if (action === 'clear-decisions') { try { localStorage.removeItem(decisionStorageKey); decisions = []; message = 'Decision notes cleared.'; } catch (error) { message = `Could not clear notes: ${error.message}`; } render(); }
   if (action === 'next') { page++; render(); }
   if (action === 'previous') { page--; render(); }
 });
@@ -98,7 +106,22 @@ function results(state) {
   const metrics = [{ label: selected.primary, result: state.primary, kind: 'Primary' }, { label: selected.returnLabel, result: state.returning, kind: 'Secondary' }, { label: selected.guardrail, result: state.guardrail, kind: 'Guardrail' }];
   return `${heading('RESULTS', 'Read the range, then the tradeoff.', 'Start with the planned outcome. Look at return use and reported problems before choosing what to do next.')}
   <section class="panel"><div class="panel-heading"><h2>Outcome comparison</h2>${badge(imported ? 'Imported data' : 'Example run')}</div><div class="table-wrap"><table><thead><tr><th>MEASURE</th><th>CONTROL</th><th>VARIANT</th><th>DIFFERENCE</th><th>95% INTERVAL</th></tr></thead><tbody>${metrics.map(m => `<tr><td><strong>${m.label}</strong><small>${m.kind}</small></td><td>${pct(m.result.control)}<small>${m.result.arms[0].successes} / ${m.result.arms[0].total}</small></td><td>${pct(m.result.treatment)}<small>${m.result.arms[1].successes} / ${m.result.arms[1].total}</small></td><td class="mono">${pp(m.result.difference)}</td><td class="mono">${m.result.adequate ? `${pp(m.result.interval[0])} to ${pp(m.result.interval[1])}` : 'Use small-sample method'}</td></tr>`).join('')}</tbody></table></div><p class="caption">Difference = variant − control. Primary intervals use a normal approximation; secondary and guardrail intervals are exploratory and are not adjusted for multiple comparisons.</p></section>
-  <div class="bottom-grid"><section class="panel"><div class="eyebrow">ALLOCATION CHECK</div><h2>${state.primary.allocation.flagged ? 'Investigate the group sizes' : 'No allocation flag'}</h2><div class="allocation"><span>Control <b>${number(state.primary.arms[0].total)}</b></span><span>Variant <b>${number(state.primary.arms[1].total)}</b></span></div><p class="small-copy">Expected split 50/50. Chi-square p = ${state.primary.allocation.p.toFixed(4)}. A value below 0.001 triggers review.</p></section><section class="panel"><div class="eyebrow">DECISION NOTE</div><h2>${state.status}</h2><p class="small-copy">${state.note}</p><p class="caption">${imported ? 'Imported rows do not establish assignment quality or follow-up maturity.' : 'The practice runs are generated from visible assumptions in data.js.'}</p></section></div>`;
+  <div class="bottom-grid"><section class="panel"><div class="eyebrow">ALLOCATION CHECK</div><h2>${state.primary.allocation.flagged ? 'Investigate the group sizes' : 'No allocation flag'}</h2><div class="allocation"><span>Control <b>${number(state.primary.arms[0].total)}</b></span><span>Variant <b>${number(state.primary.arms[1].total)}</b></span></div><p class="small-copy">Expected split 50/50. Chi-square p = ${state.primary.allocation.p.toFixed(4)}. A value below 0.001 triggers review.</p></section><section class="panel"><div class="eyebrow">DECISION NOTE</div><h2>${state.status}</h2><p class="small-copy">${state.note}</p><p class="caption">${imported ? 'Imported rows do not establish assignment quality or follow-up maturity.' : 'The practice runs are generated from visible assumptions in data.js.'}</p></section></div>${decisionForm()}`;
+}
+
+function decisionForm() {
+  const saved = currentDecision();
+  return `<section class="panel decision-editor"><div class="eyebrow">REVIEWER DECISION</div><h2>Record the reasoning.</h2><p class="small-copy">Keep your decision beside this run and plan. Changing the data, source, experiment, or plan opens a separate note.</p><form id="decision-form"><label>Decision<select name="decision" required><option value="">Choose a decision</option>${decisionOptions.map(option => `<option ${saved?.decision === option ? 'selected' : ''}>${option}</option>`).join('')}</select></label><label>Rationale<textarea name="rationale" required maxlength="3000" rows="3" placeholder="What does the evidence support, and what is still uncertain?">${esc(saved?.rationale || '')}</textarea></label><label>Next step<textarea name="nextStep" required maxlength="3000" rows="2" placeholder="What needs to happen before the next decision?">${esc(saved?.nextStep || '')}</textarea></label><button class="button primary" type="submit">Save decision note</button><p id="decision-feedback" role="status">${saved ? `Saved ${esc(new Date(saved.savedAt).toLocaleString())}. Included in readout exports.` : 'No decision recorded for this run and plan.'}</p></form><p class="caption">Notes save in this browser. Export the readout to keep a copy. A saved choice is a reviewer judgment and does not override the analysis checks.</p><button class="text-link" data-action="clear-decisions">Clear all saved decision notes</button></section>`;
+}
+
+function recordDecision(event) {
+  event.preventDefault();
+  const data = new FormData(event.target);
+  try {
+    decisions = saveDecision(localStorage, decisions, currentContext(), { decision: data.get('decision'), rationale: data.get('rationale'), nextStep: data.get('nextStep') });
+    message = 'Decision saved in this browser and included in readout exports.';
+    render();
+  } catch (error) { root.querySelector('#decision-feedback').textContent = `Could not save decision: ${error.message}`; }
 }
 
 function users(state) {
@@ -131,8 +154,11 @@ function savePlan(event) {
 async function importRun(event) {
   try {
     const file = event.target.files[0];
+    if (!file) return;
     if (file.size > 15_000_000) throw new Error('Choose a JSON file below 15 MB.');
-    imported = validateRows(JSON.parse(await file.text()));
+    const validated = validateRows(JSON.parse(await file.text()));
+    const fingerprint = await fingerprintRows(validated);
+    imported = validated; importedFingerprint = fingerprint;
     search = ''; page = 1; message = `${number(imported.length)} assigned users loaded.`;
   } catch (error) { message = `Could not import: ${error.message}`; }
   render();
@@ -144,4 +170,9 @@ function download(name, value) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-render();
+root.textContent = 'Loading experiment workspace…';
+Promise.all(experiments.map(async experiment => {
+  practiceFingerprints[experiment.id] = await fingerprintRows(generateRun(experiment));
+})).then(render).catch(() => {
+  root.textContent = 'The workspace needs a secure browser context for run verification. Open it on localhost or HTTPS.';
+});
