@@ -3,9 +3,10 @@
 const Z95 = 1.959963984540054;
 
 export function wilson(successes, total, z = Z95) {
-  if (!Number.isInteger(total) || total < 1 || !Number.isInteger(successes) || successes < 0 || successes > total) {
+  if (!Number.isSafeInteger(total) || total < 1 || !Number.isSafeInteger(successes) || successes < 0 || successes > total) {
     throw new Error('Counts must be integers with 0 ≤ successes ≤ total and total > 0.');
   }
+  if (!Number.isFinite(z) || z <= 0) throw new Error('The confidence multiplier must be a finite positive number.');
   const p = successes / total;
   const denominator = 1 + z * z / total;
   const center = (p + z * z / (2 * total)) / denominator;
@@ -16,6 +17,7 @@ export function wilson(successes, total, z = Z95) {
 // Abramowitz–Stegun normal CDF approximation. Sufficient for the display
 // precision here; tests compare known reference points and tail behavior.
 export function normalCDF(x) {
+  if (typeof x !== 'number' || Number.isNaN(x)) throw new Error('The normal CDF requires a number.');
   const t = 1 / (1 + 0.2316419 * Math.abs(x));
   const density = Math.exp(-x * x / 2) / Math.sqrt(2 * Math.PI);
   const tail = density * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
@@ -23,6 +25,7 @@ export function normalCDF(x) {
 }
 
 export function allocationCheck(control, treatment) {
+  if (![control, treatment].every(count => Number.isSafeInteger(count) && count >= 0) || !Number.isSafeInteger(control + treatment)) throw new Error('Allocation counts must be non-negative safe integers.');
   const total = control + treatment;
   if (!total) return { p: null, flagged: true };
   const expected = total / 2; // This release supports equal allocation only.
@@ -46,13 +49,15 @@ export function compare(controlSuccess, controlTotal, treatmentSuccess, treatmen
 }
 
 export function planSample(baseline, absoluteEffect) {
-  if (!(baseline > 0 && baseline < 1 && absoluteEffect > 0 && absoluteEffect < 1 - baseline)) throw new Error('Choose a baseline and a positive effect that stays below 100%.');
+  if (!Number.isFinite(baseline) || !Number.isFinite(absoluteEffect) || !(baseline > 0 && baseline < 1 && absoluteEffect > 0 && absoluteEffect < 1 - baseline)) throw new Error('Choose a baseline and a positive effect that stays below 100%.');
   // Approximate equal-arm planning: two-sided alpha .05, power .80,
   // fixed horizon and independent binary outcomes. No clustering adjustment.
   return Math.ceil(2 * baseline * (1 - baseline) * (Z95 + 0.8416212335729143) ** 2 / absoluteEffect ** 2);
 }
 
 export function summarize(rows, metric = 'completed') {
+  if (!['completed', 'returned', 'problem'].includes(metric)) throw new Error('Choose completed, returned, or problem as the outcome.');
+  rows = validateRows(rows);
   const arms = ['control', 'treatment'].map(variant => {
     const subset = rows.filter(row => row.variant === variant);
     return { variant, total: subset.length, successes: subset.filter(row => row[metric]).length };
@@ -75,3 +80,4 @@ export function validateRows(value) {
   if (!rows.some(r => r.variant === 'control') || !rows.some(r => r.variant === 'treatment')) throw new Error('Include users from both variants.');
   return rows;
 }
+

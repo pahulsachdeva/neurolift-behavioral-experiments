@@ -70,3 +70,35 @@ test('practice runs reproduce the same rows and distinguish different experiment
   const planning = experiments.find(e => e.id === 'planning');
   assert.ok(summarize(generateRun(planning), 'problem').difference > .01);
 });
+
+
+test('numerical helpers reject invalid counts instead of producing a readout', () => {
+  for (const count of [-1, 1.5, NaN, Infinity, '10', Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(() => allocationCheck(count, 10), /counts/);
+    assert.throws(() => wilson(1, count));
+  }
+  assert.throws(() => allocationCheck(Number.MAX_SAFE_INTEGER, 1), /counts/);
+  assert.deepEqual(allocationCheck(0, 0), { p: null, flagged: true });
+  for (const z of [0, -1, NaN, Infinity, '1.96']) assert.throws(() => wilson(5, 10, z), /multiplier/);
+  assert.throws(() => compare(11, 10, 5, 10));
+});
+
+test('planning and distribution functions require numbers while preserving valid tails', () => {
+  for (const invalid of [NaN, Infinity, '0.3', null]) {
+    assert.throws(() => planSample(invalid, .04));
+    assert.throws(() => planSample(.3, invalid));
+  }
+  assert.throws(() => normalCDF(NaN), /number/);
+  assert.throws(() => normalCDF('1.96'), /number/);
+  assert.equal(normalCDF(Infinity), 1);
+  assert.equal(normalCDF(-Infinity), 0);
+});
+
+test('summaries reject unknown metrics, malformed outcomes, and duplicate assignments', () => {
+  const control = { userId: 'a', variant: 'control', completed: false, returned: false, problem: false };
+  const treatment = { ...control, userId: 'b', variant: 'treatment' };
+  assert.throws(() => summarize([control, treatment], 'completion'), /outcome/);
+  assert.throws(() => summarize([control, { ...treatment, completed: 'false' }]), /completed/);
+  assert.throws(() => summarize([control, { ...treatment, userId: 'a' }]), /duplicate/);
+  assert.throws(() => summarize([control, { ...treatment, variant: 'variant-b' }]), /variant/);
+});

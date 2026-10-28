@@ -29,3 +29,10 @@ The approximate per-arm target is `ceil(2 × p(1−p) × (z(.975) + z(.80))² / 
 The readout checks allocation, sparse cells, per-arm sample targets, and the planned duration before describing the effect. Imported data needs a review of duration and maturity because neither is present in the row schema. The guardrail review threshold is a one percentage point increase in reported problems. It is a practical threshold, not a formal non-inferiority test.
 
 The primary outcome is defined in advance in the test brief. Return use and guardrail intervals are exploratory; there is no multiplicity adjustment. The app does not declare a winner, stop a test automatically, or deploy a change.
+
+
+## Invalid numerical inputs
+
+The numerical helpers reject negative, fractional, unsafe, or nonnumeric counts. The Wilson confidence multiplier must be finite and positive; sample-planning inputs must be finite numeric rates. The normal CDF accepts the mathematical infinite tails (0 and 1) and rejects NaN or nonnumeric values.
+
+Summaries apply the same assignment-row contract as the importer and accept only the three documented outcomes. Unknown metric names, duplicate assignments, invalid variants, and string-valued outcomes fail explicitly rather than silently contributing to a misleading rate. These checks do not change the estimators or establish assignment quality or mature follow-up.
