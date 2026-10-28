@@ -16,3 +16,10 @@ Start in `statistics.js` for the calculations and import contract. `data.js` def
 ## Remaining work
 
 The statistical suite checks reference values, edge cases, allocation flags, and assignment denominators. Browser interaction and layout still need a full visual pass on a hosted workspace. Add timestamp validation before accepting event-level data. Review the sample approximation and interval coverage against an independent library before extending the analysis beyond the current binary-outcome examples.
+
+
+## Decision notes
+
+Results now provides a reviewer decision, rationale, and next step. Notes save locally and appear under `reviewerDecision` in readout exports. A SHA-256 fingerprint identifies the full assignment-level data, independent of row order. The note context also includes the experiment, provenance, baseline, target effect, and observation period. Replacing data or editing the plan opens a separate note; returning to the original context restores its saved note.
+
+This is a single-browser notebook, not a multi-reviewer audit log. Saving replaces the previous note for the same context. Storage failures display an error without claiming a successful save. Clear all saved decision notes from Results. Imported rows remain in memory; reimport the same rows and select the same plan to retrieve their note. Use localhost or HTTPS for Web Crypto. Tests cover fingerprints, plan/source separation, updates, reload, and corrupt or unavailable storage.
