@@ -38,10 +38,11 @@ The sample planner sets a target before the readout. The results view shows the 
 - Read the hypothesis, intervention, outcome definition, and practical tradeoff.
 - Adjust a baseline and the smallest useful effect to plan a sample.
 - Compare completion and return use alongside a guardrail.
+- Save a reviewer decision, rationale, and next step from Results, and include the note in the exported readout.
 - Inspect the users behind each denominator and search by ID or variant.
 - Import assignment-level JSON and export a readout or the underlying rows.
 
-Plans save in the browser. Imported datasets stay in memory until the workspace is reset or closed.
+Plans and decision notes save in the browser. Notes belong to a specific experiment, data source, dataset, and plan. Changing any of those opens a separate note. Use localhost or HTTPS so the browser can verify the dataset fingerprint. Imported datasets stay in memory until the workspace is reset or closed.
 
 ## How the measurement works
 
@@ -81,3 +82,4 @@ Use a complete assignment cohort with outcomes measured over the same window. Th
 The next pieces are event timestamps and mature-window checks, an independent comparison with a statistics library, and a hosted workspace. After that, I want to connect a reviewed Sentient insight directly to a saved NeuroLift plan.
 
 [Development notes](docs/development-notes.md) · [Architecture](docs/architecture.md) · [Roadmap](docs/roadmap.md) · [Contributing](CONTRIBUTING.md) · [MIT license](LICENSE)
+
