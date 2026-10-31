@@ -1,60 +1,52 @@
-<p align="center"><img src="assets/header.svg" alt="NeuroLift — Intelligence in action" width="100%"></p>
+<p align="center"><img src="assets/header.svg" alt="NeuroLift — Try a change. See if it helps." width="100%"></p>
 
-<p align="center">Project 02 by Pahul Sachdeva · Behavioral experimentation and measurement</p>
+A project by Pahul Sachdeva.
 
-## Why I'm building this
+## Why I built this
 
-In [Sentient](https://github.com/pahulsachdeva/sentient-behavioral-intelligence), I started with a question about customer feedback: what can a conversation tell us about why someone struggles to use an AI product?
+[Sentient](https://github.com/pahulsachdeva/sentient-behavioral-intelligence) helps me turn feedback into a question. NeuroLift helps me decide how to test the answer.
 
-NeuroLift is the next part of that question. Once I have an idea for helping someone, how would I test whether it helps? What should I measure, how long should I wait, and what would make me reconsider the change?
+If I change an onboarding flow, how will I know whether it helped? What should I measure? How many people do I need? When should I wait instead of making a decision?
 
-I work in AI Enablement and Customer Sentiment at EliseAI. I'm interested in how customer education connects to activation, independent use, and the reasons people return. This project gives me a place to build the measurement side of that work.
+I built this to work through those questions using a consumer AI assistant as the example.
 
-## The example I'm using
+## Three tests to explore
 
-I'm continuing with a **B2C SaaS AI assistant** used for studying, writing, planning, and learning to code. I created the user stories and practice runs for this project so I could explore the idea without using my company's internal examples.
+| Test | Change to try | What to watch |
+|---|---|---|
+| Study | Let people paste notes straight into a quiz starter | Do more people finish their first quiz? |
+| Writing | Show the original draft beside the rewrite | Do more people finish their writing task? |
+| Planning | Send an optional recap of unfinished plans | Do people return, and do more people complain about notifications? |
 
-The workspace includes three experiments. Their user rows are generated from fixed seeds and visible rate assumptions, so I can reproduce the calculations and work through different decisions.
+The app generates the example data from fixed settings. The same settings give the same rows each time. These are practice runs, with no company customer data or measured business results.
 
-| Test | Product change | Outcome to start with | What the example helps me explore |
-|---|---|---|---|
-| A faster first study session | Let users paste notes straight into a quiz starter | First quiz completion | A promising estimate, its uncertainty, and what to check next |
-| Keep the original in view | Show a rewrite beside the user's original draft | Writing task completion | An allocation mismatch that needs investigation before interpreting lift |
-| A reason to come back | Offer an opt-in morning recap of unfinished plans | Planning task completion | A useful outcome that comes with more notification complaints |
+One example has uneven group sizes. Another has more reported problems. I kept these cases because they make the decision harder in a useful way.
 
-## One test, worked through
+## What it does
 
-Maya wants to study for an exam. She opens the assistant, sees several setup steps, and leaves before creating a quiz. In Sentient, that becomes a question about effort and unclear guidance.
+- Set a starting completion rate, the smallest increase worth testing, and a minimum test length.
+- Estimate how many people each group needs.
+- Compare completion, return use, and reported problems.
+- Check whether the group sizes are far from the planned 50/50 split.
+- Read the range around each estimate before choosing a next step.
+- Save a decision, explain why, and export it with the results.
+- Search user rows or import a JSON file.
 
-In NeuroLift, I turn it into a test: give eligible new study users a starter prompt that turns their notes into five quiz questions. Compare that with the existing introduction.
+A saved decision belongs to that test, dataset, and plan. Changing any of them opens a separate note. Plans and notes save in this browser. Imported rows stay in memory until you reset the run, switch tests, or close the page.
 
-I define quiz completion as the main outcome and count everyone assigned, including people who leave. I also look at whether they study again within seven days and whether they report trouble checking answers. That lets me consider the first useful result, sustained value, and a possible cost together.
+## How to read the results
 
-The sample planner sets a target before the readout. The results view shows the estimated difference and its interval, then checks the plan and allocation before suggesting what to look at next.
+The app counts everyone assigned to a group, including people who did not finish. It shows each group's rate and the difference between them.
 
-## What you can do
+A change from 30% to 35% is an increase of 5 percentage points. The range beside that difference shows uncertainty in the estimate. A good-looking early result is a reason to keep checking the plan, rather than stop the test early.
 
-- Switch between the three experiment questions.
-- Read the hypothesis, intervention, outcome definition, and practical tradeoff.
-- Adjust a baseline and the smallest useful effect to plan a sample.
-- Compare completion and return use alongside a guardrail.
-- Save a reviewer decision, rationale, and next step from Results, and include the note in the exported readout.
-- Inspect the users behind each denominator and search by ID or variant.
-- Import assignment-level JSON and export a readout or the underlying rows.
+The sample planner is an approximation for two equal groups. Real tests also need reliable assignment and enough time for everyone to finish the follow-up period. The imported file does not contain dates, so the app asks you to check those yourself.
 
-Plans and decision notes save in the browser. Notes belong to a specific experiment, data source, dataset, and plan. Changing any of those opens a separate note. Use localhost or HTTPS so the browser can verify the dataset fingerprint. Imported datasets stay in memory until the workspace is reset or closed.
+[Calculation details and references](docs/methods.md)
 
-## How the measurement works
+## Run it
 
-The analysis uses one row per assigned person and two equally allocated variants. It calculates completion rates, Wilson intervals for each arm, an approximate interval for their difference, and a sample ratio check. The planner uses an equal-arm approximation with 80% power and a two-sided 5% test.
-
-The code keeps those calculations separate from the interface. Comments explain the denominator, the allocation threshold, and when a normal approximation needs a different method. [Methods and references](docs/methods.md) cover the details.
-
-I use the practice runs to examine a decision, rather than to claim a product improvement. A real test would also need trustworthy assignment, event timestamps, complete follow-up, and a plan agreed before examining the outcome.
-
-## Run locally
-
-Use Node.js 20 or later. There are no packages to install or API keys to configure.
+Use Node.js 20.11 or later. No packages or API keys are needed. Open the app on localhost or HTTPS so the browser can identify each dataset.
 
 ```bash
 npm start
@@ -66,7 +58,9 @@ npm run check
 npm test
 ```
 
-To try an import, use a JSON array with one row per assigned person:
+## Import user rows
+
+Use one row per person assigned to the test:
 
 ```json
 [
@@ -75,11 +69,10 @@ To try an import, use a JSON array with one row per assigned person:
 ]
 ```
 
-Use a complete assignment cohort with outcomes measured over the same window. The importer checks the schema and rejects duplicate user IDs; it cannot establish how the file was collected.
+Use `true` or `false` for each outcome. Include both groups and give each person a unique ID. Wait until everyone's follow-up period is over before making the file. The importer checks the file format; it cannot check how the test was run.
 
-## Where I'm taking it next
+## Next
 
-The next pieces are event timestamps and mature-window checks, an independent comparison with a statistics library, and a hosted workspace. After that, I want to connect a reviewed Sentient insight directly to a saved NeuroLift plan.
+I want to add dates so the app can check follow-up time, compare the calculations with a separate statistics library, and connect a reviewed Sentient question to a saved test plan.
 
-[Development notes](docs/development-notes.md) · [Architecture](docs/architecture.md) · [Roadmap](docs/roadmap.md) · [Contributing](CONTRIBUTING.md) · [MIT license](LICENSE)
-
+[Roadmap](docs/roadmap.md) · [Contributing](CONTRIBUTING.md) · [MIT license](LICENSE)
